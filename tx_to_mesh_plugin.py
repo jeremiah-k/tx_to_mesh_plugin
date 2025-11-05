@@ -166,7 +166,7 @@ class Plugin(BasePlugin):
             return True  # Claimed but not relayed
 
     async def handle_meshtastic_message(
-        self, _packet, _formatted_message: str, _longname: str, _meshnet_name: str
+        self, _packet, formatted_message: str, longname: str, meshnet_name: str
     ):
         """
         Pass-through handler for incoming Meshtastic messages.
