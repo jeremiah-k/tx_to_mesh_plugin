@@ -59,8 +59,12 @@ class Plugin(BasePlugin):
         """
         super().__init__()
 
+        # Plugin configuration is loaded by BasePlugin from the global config
+        # and available as self.config
+        self.plugin_config = self.config
+
         # Require explicit channel configuration for safety
-        if not self.config.get("channels"):
+        if not self.plugin_config.get("channels"):
             self.logger.error(
                 f"Plugin '{self.plugin_name}' requires explicit 'channels' configuration. "
                 "Please add a 'channels' list to your plugin configuration in config.yaml. "
@@ -70,14 +74,11 @@ class Plugin(BasePlugin):
                 f"Plugin '{self.plugin_name}' requires channels configuration"
             )
 
-        # Plugin configuration is loaded by BasePlugin from the global config
-        # and available as self.config
-        self.plugin_config = self.config
-
         # Configuration options with defaults
         self.command_prefix = self.plugin_config.get("command_prefix", "!tx")
         self.strip_prefix = self.plugin_config.get("strip_prefix", True)
         self.case_sensitive = self.plugin_config.get("case_sensitive", False)
+        self.channels = self.plugin_config.get("channels", [])
 
         # Log plugin initialization
         self.logger.info("TX to Mesh Plugin initialized")
@@ -85,21 +86,6 @@ class Plugin(BasePlugin):
         self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
         self.logger.info(f"Configured channels: {self.channels}")
-
-    def get_channel_for_room(self, room_id: str) -> Optional[int]:
-        """
-        Finds the Meshtastic channel associated with the given Matrix room ID.
-
-        Parameters:
-            room_id (str): Matrix room ID to look up.
-
-        Returns:
-            int or None: Channel number if found, None otherwise.
-        """
-        for room_config in self.matrix_rooms:
-            if room_config.get("room_id") == room_id:
-                return room_config.get("channel")
-        return None
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
