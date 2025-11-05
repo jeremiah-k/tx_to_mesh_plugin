@@ -57,7 +57,7 @@ class Plugin(BasePlugin):
             f"Allow empty message after prefix: {self.allow_empty_message}"
         )
 
-    async def handle_room_message(self, _room, event, full_message) -> bool:
+    async def handle_room_message(self, room, event, full_message) -> bool:
         """
         Handle Matrix messages and claim them for forwarding to Meshtastic.
 
@@ -73,6 +73,14 @@ class Plugin(BasePlugin):
         Returns:
             bool: True if message was claimed and handled, False otherwise
         """
+        # Check if this plugin should respond to this message
+        # For Matrix messages, we need to determine the channel from the room configuration
+        # Matrix messages are always considered "direct messages" for channel checking purposes
+        # since they come from Matrix rooms, not Meshtastic channels
+        if not self.is_channel_enabled(0, is_direct_message=True):
+            self.logger.debug(f"tx_to_mesh: not enabled for this room/channel")
+            return False
+
         # Extract message body from event or full_message
         body = getattr(event, "body", None) or full_message.get("body") or ""
         if not isinstance(body, str):
@@ -123,9 +131,17 @@ class Plugin(BasePlugin):
             longname: Long name of the Meshtastic node
             meshnet_name: Name of the source mesh network
         """
+        # Check if this plugin should respond to this message
+        channel = packet.get("channel", 0)
+        is_direct_message = self.is_direct_message(packet)
+
+        if not self.is_channel_enabled(channel, is_direct_message=is_direct_message):
+            self.logger.debug(f"tx_to_mesh: not enabled for channel {channel}")
+            return False
+
         # This plugin doesn't need to process Meshtastic messages
         # All Meshtastic -> Matrix messages pass through unchanged
-        pass
+        return False
 
     def get_matrix_commands(self) -> Dict[str, str]:
         """
@@ -196,6 +212,11 @@ PLUGIN_INFO = {
     "author": "mate71pl",
     "requires": [],
     "config_schema": {
+        "channels": {
+            "type": "list",
+            "required": True,
+            "description": "List of Meshtastic channels to monitor for Matrix messages (required)",
+        },
         "command_prefix": {
             "type": "string",
             "default": "!tx",
