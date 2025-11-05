@@ -2,5 +2,7 @@
 select = ["B", "D3", "E", "F"]
 
 # Never enforce `E501` (line length violations). This should be handled by formatters.
-# Ignore `F401` (unused imports) for standalone plugin compatibility
-ignore = ["E501", "F401"]
+# F401 (unused imports) is handled with inline # noqa: F401 comments in the plugin code
+# because this is a standalone plugin where some imports may be needed for compatibility
+# in different environments, even if trunk detects them as unused in the current context.
+ignore = ["E501"]

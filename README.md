@@ -18,7 +18,7 @@ Add this plugin as a community plugin in your MMRelay `config.yaml`:
 community-plugins:
   tx_to_mesh:
     active: true
-    repository: https://github.com/yourusername/tx_to_mesh_plugin.git
+    repository: https://github.com/mate71pl/tx_to_mesh_plugin.git
     tag: main # or specify a version tag like v1.0.0
     command_prefix: "!tx"
     strip_prefix: true

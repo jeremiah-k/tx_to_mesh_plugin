@@ -9,8 +9,10 @@ Author: mate71pl
 License: MIT
 """
 
-import asyncio
-import logging
+# Imports needed for standalone plugin compatibility - trunk may detect as unused
+# so # noqa: F401 is necessary to ignore these warnings
+import asyncio  # noqa: F401
+import logging  # noqa: F401
 from typing import Any, Dict, Optional
 
 # Import the base plugin class
@@ -58,70 +60,56 @@ class Plugin(BasePlugin):
             f"Allow empty message after prefix: {self.allow_empty_message}"
         )
 
-    async def handle_matrix_message(
-        self, room, event, formatted_message: str, sender_id: str, meshnet_name: str
-    ) -> Optional[str]:
+    async def handle_room_message(self, room, event, full_message) -> bool:
         """
-        Handle Matrix messages before they are sent to Meshtastic.
+        Handle Matrix messages and claim them for forwarding to Meshtastic.
 
         This method intercepts Matrix room messages and filters them based on
-        the !tx command prefix. Only messages starting with !tx are allowed
-        to be relayed to the mesh network.
+        the command prefix. Only messages starting with the configured prefix
+        are relayed to the mesh network.
 
         Args:
             room: Matrix room object
             event: Matrix event object
-            formatted_message: The formatted message content
-            sender_id: Matrix user ID of the sender
-            meshnet_name: Name of the target mesh network
+            full_message: The full message content/dict
 
         Returns:
-            Optional[str]: Modified message to send to Meshtastic, or None to block
+            bool: True if message was claimed and handled, False otherwise
         """
+        # Extract message body from event or full_message
+        body = getattr(event, "body", None) or full_message.get("body") or ""
+        if not isinstance(body, str):
+            return False
 
-        # Get the original message content
-        original_message = formatted_message.strip()
+        msg = body.strip()
+        if not msg:
+            return False
 
-        if not original_message:
-            self.logger.debug("Empty message received, skipping")
-            return None
+        # Match command prefix
+        prefix = self.command_prefix
+        candidate = msg[: len(prefix)]
 
-        # Check command prefix (case sensitivity handling)
-        command_prefix = self.command_prefix
-        check_message = original_message
+        if (
+            (candidate == prefix)
+            if self.case_sensitive
+            else (candidate.lower() == prefix.lower())
+        ):
+            content = msg[len(prefix) :].lstrip()
+            if not content and not self.allow_empty_message:
+                self.logger.warning("tx_to_mesh: empty after prefix; blocking")
+                return True  # Claimed, do not fall through
 
-        if not self.case_sensitive:
-            command_prefix = command_prefix.lower()
-            check_message = original_message.lower()
+            # Optionally keep or strip prefix
+            to_send = content if self.strip_prefix else msg
 
-        # Check if message starts with the command prefix
-        if not check_message.startswith(command_prefix):
-            self.logger.debug(
-                f"Message does not start with '{self.command_prefix}', blocking relay"
-            )
-            return None
-
-        # Log that we're processing a valid command
-        self.logger.info(f"Processing !tx command from {sender_id} in {meshnet_name}")
-
-        # Extract the message content after the command prefix
-        if self.strip_prefix:
-            # Remove the command prefix and any following whitespace
-            message_content = original_message[len(self.command_prefix) :].lstrip()
-
-            # Check if we allow empty messages after stripping prefix
-            if not message_content and not self.allow_empty_message:
-                self.logger.warning(
-                    f"Empty message after removing '{self.command_prefix}' prefix, blocking relay"
-                )
-                return None
-
-            self.logger.debug(f"Stripped prefix, sending: '{message_content}'")
-            return message_content
-        else:
-            # Keep the full message including prefix
-            self.logger.debug(f"Keeping full message: '{original_message}'")
-            return original_message
+            # Send to mesh via BasePlugin helper (queued & rate-limited)
+            try:
+                await self.send_message(to_send)
+                self.logger.info("tx_to_mesh: relayed to mesh")
+            except Exception as e:
+                self.logger.error(f"tx_to_mesh: failed to relay: {e}")
+            return True  # Claimed
+        return False
 
     async def handle_meshtastic_message(
         self, packet, formatted_message: str, longname: str, meshnet_name: str
@@ -196,6 +184,7 @@ class Plugin(BasePlugin):
                 f"• Command prefix: {info['config']['command_prefix']}\n"
                 f"• Strip prefix: {info['config']['strip_prefix']}\n"
                 f"• Case sensitive: {info['config']['case_sensitive']}\n"
+                f"• Allow empty message: {info['config']['allow_empty_message']}\n"
                 f"• Status: {info['status']}"
             )
 
