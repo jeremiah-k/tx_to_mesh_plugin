@@ -136,14 +136,19 @@ class Plugin(BasePlugin):
 
             # Send to mesh via BasePlugin helper (queued & rate-limited)
             try:
-                await self.send_message(to_send, channel=channel)
+                self.send_message(to_send, channel=channel)
                 self.logger.info(f"tx_to_mesh: relayed to mesh on channel {channel}")
             except Exception:
                 self.logger.exception(
                     f"tx_to_mesh: failed to relay on channel {channel}"
                 )
             return True  # Claimed
-        return False
+        else:
+            # Message doesn't have prefix, but we claim it to prevent fallback relay
+            self.logger.debug(
+                f"tx_to_mesh: blocked message without prefix on channel {channel}"
+            )
+            return True  # Claimed but not relayed
 
     async def handle_meshtastic_message(
         self, packet, formatted_message: str, longname: str, meshnet_name: str
