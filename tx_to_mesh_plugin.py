@@ -60,9 +60,9 @@ class Plugin(BasePlugin):
         self.case_sensitive = self.config.get("case_sensitive", False)
 
         # Log plugin initialization
-        self.logger.info("TX to Mesh Plugin initialized")
-        self.logger.info(f"Command prefix: '{self.command_prefix}'")
-        self.logger.info(f"Case sensitive: {self.case_sensitive}")
+        self.logger.debug("TX to Mesh Plugin initialized")
+        self.logger.debug(f"Command prefix: '{self.command_prefix}'")
+        self.logger.debug(f"Case sensitive: {self.case_sensitive}")
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
@@ -85,7 +85,6 @@ class Plugin(BasePlugin):
         # Find the channel for this room using matrix_rooms config
         room_id = getattr(room, "room_id", None) or full_message.get("room_id")
         if not room_id:
-            self.logger.debug("tx_to_mesh: no room_id found")
             return False
 
         # Look up channel in matrix_rooms config
@@ -159,9 +158,7 @@ class Plugin(BasePlugin):
                 self.send_message(to_send, channel=channel)
                 self.logger.info(f"tx_to_mesh: relayed to mesh on channel {channel}")
             except Exception:
-                self.logger.exception(
-                    f"tx_to_mesh: failed to relay on channel {channel}"
-                )
+                self.logger.debug(f"tx_to_mesh: failed to relay on channel {channel}")
             return True  # Claimed
         else:
             # Message doesn't have prefix, but we claim it to prevent fallback relay
