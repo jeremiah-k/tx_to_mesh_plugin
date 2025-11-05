@@ -9,8 +9,7 @@ Author: mate71pl
 License: MIT
 """
 
-# Imports needed for standalone plugin compatibility - trunk may detect as unused
-# so # noqa: F401 is necessary to ignore these warnings
+# Imports needed for standalone plugin compatibility
 import asyncio  # noqa: F401
 import logging  # noqa: F401
 from typing import Any, Dict, Optional
@@ -60,7 +59,7 @@ class Plugin(BasePlugin):
             f"Allow empty message after prefix: {self.allow_empty_message}"
         )
 
-    async def handle_room_message(self, room, event, full_message) -> bool:
+    async def handle_room_message(self, _room, event, full_message) -> bool:
         """
         Handle Matrix messages and claim them for forwarding to Meshtastic.
 
@@ -106,8 +105,8 @@ class Plugin(BasePlugin):
             try:
                 await self.send_message(to_send)
                 self.logger.info("tx_to_mesh: relayed to mesh")
-            except Exception as e:
-                self.logger.error(f"tx_to_mesh: failed to relay: {e}")
+            except Exception:
+                self.logger.exception("tx_to_mesh: failed to relay")
             return True  # Claimed
         return False
 
@@ -163,7 +162,7 @@ class Plugin(BasePlugin):
         }
 
     async def handle_plugin_command(
-        self, command: str, args: list, room_id: str, sender_id: str
+        self, command: str, _args: list, _room_id: str, _sender_id: str
     ) -> Optional[str]:
         """
         Handle plugin-specific commands from Matrix.
