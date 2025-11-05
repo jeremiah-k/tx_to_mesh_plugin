@@ -154,7 +154,8 @@ class Plugin(BasePlugin):
                 self.logger.info(f"tx_to_mesh: relayed to mesh on channel {channel}")
             except Exception as e:
                 self.logger.error(
-                    f"tx_to_mesh: failed to relay on channel {channel}: {e}"
+                    f"tx_to_mesh: failed to relay on channel {channel}: {e}",
+                    exc_info=True,
                 )
             return True  # Claimed
         else:
@@ -165,7 +166,7 @@ class Plugin(BasePlugin):
             return True  # Claimed but not relayed
 
     async def handle_meshtastic_message(
-        self, packet, formatted_message: str, longname: str, meshnet_name: str
+        self, _packet, _formatted_message: str, _longname: str, _meshnet_name: str
     ):
         """
         Pass-through handler for incoming Meshtastic messages.

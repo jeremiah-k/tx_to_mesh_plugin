@@ -51,8 +51,8 @@ channels: [0, 1, 2, 3, 4]
 # Monitor only specific channels
 channels: [0, 2]  # Only primary and longfast channels
 
-# Empty channels list (not recommended - plugin won't respond to anything)
-channels: []  # Plugin will ignore all messages including DMs
+# Empty channels list (not recommended - plugin won't process any Matrix room messages)
+channels: []  # Plugin will not process any messages (DMs are always ignored)
 ```
 
 The channel numbers correspond to your Meshtastic channel configuration in `matrix_rooms`.
@@ -107,7 +107,7 @@ This plugin follows MMRelay's BasePlugin interface:
 - **`handle_meshtastic_message()`**: Pass-through for mesh messages (no filtering needed)
 - **`get_matrix_commands()`**: Returns list of commands for help system
 - **`description` property**: Provides help text for the plugin
-- **`get_config_schema()`**: Defines configuration validation schema
+- **`PLUGIN_INFO`**: Module-level dict containing plugin metadata and config_schema
 
 ## License
 
