@@ -11,10 +11,8 @@ License: MIT
 
 from typing import Any, Dict, Optional
 
-from config import relay_config
-
 # Import the base plugin class and config
-from plugins.base_plugin import BasePlugin
+from mmrelay.plugins.base_plugin import BasePlugin, config
 
 
 class Plugin(BasePlugin):
@@ -90,7 +88,7 @@ class Plugin(BasePlugin):
             return False
 
         # Look up channel in matrix_rooms config
-        matrix_rooms = relay_config["matrix_rooms"]
+        matrix_rooms = config.get("matrix_rooms", [])
         channel = None
         for room_config in matrix_rooms:
             if room_config["id"] == room_id:
