@@ -132,19 +132,14 @@ class Plugin(BasePlugin):
                 return True  # Claimed, do not fall through
 
             # Get sender display name for proper attribution
-            room_display_name = (
-                getattr(room, "user_name", lambda x: None)(event.sender)
-                if hasattr(room, "user_name")
-                else None
+            display_name = (
+                room.user_name(event.sender) if hasattr(room, "user_name") else None
             )
-            if room_display_name:
-                display_name = room_display_name
-            else:
-                # Fallback to extracting from event sender or use a generic format
+            if not display_name:
+                # Fallback to extracting localpart from sender's Matrix ID
+                sender_id = event.sender
                 display_name = (
-                    event.sender.split(":")[0][1:]
-                    if ":" in event.sender
-                    else event.sender
+                    sender_id.split(":")[0][1:] if ":" in sender_id else sender_id
                 )
 
             # Generate proper sender prefix using configured matrix prefix format
@@ -157,8 +152,10 @@ class Plugin(BasePlugin):
             try:
                 self.send_message(to_send, channel=channel)
                 self.logger.info(f"tx_to_mesh: relayed to mesh on channel {channel}")
-            except Exception:
-                self.logger.debug(f"tx_to_mesh: failed to relay on channel {channel}")
+            except Exception as e:
+                self.logger.error(
+                    f"tx_to_mesh: failed to relay on channel {channel}: {e}"
+                )
             return True  # Claimed
         else:
             # Message doesn't have prefix, but we claim it to prevent fallback relay
