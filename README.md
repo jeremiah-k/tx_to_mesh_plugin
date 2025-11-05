@@ -1,76 +1,114 @@
-# mmr-plugin-template
+# TX to Mesh Plugin for MMRelay
 
-## MMRelay Plugin Template
+A plugin for MMRelay that filters Matrix messages and only forwards messages starting with a specific command prefix (default: `!tx`) to the Meshtastic network. This plugin only handles Matrix->Meshtastic messages and ignores direct messages.
 
-Fork this repo and create a new one with the name of your plugin, rename `example_plugin.py` to the name of your plugin and go from there.
+## Features
 
-For more information on the basics of creating plugins see the [MMRelay Plugin Development Guide](https://github.com/geoffwhittington/meshtastic-matrix-relay/wiki/Plugin-Development-Guide).
+- **Command Filtering**: Only messages starting with `!tx` (or configured prefix) are relayed to Meshtastic
+- **Sender Attribution**: Always includes the configured Matrix prefix format (e.g., "Alice[M]: ") before messages
+- **Case Sensitivity**: Configurable case-sensitive prefix matching
+- **Priority Control**: Runs early to claim messages before other plugins
 
-## Important Notes
+## Installation
 
-### Sending Messages
+Add this plugin as a community plugin in your MMRelay `config.yaml`:
 
-#### Sending Meshtastic Messages
-
-Use the `send_message()` method from `BasePlugin`. This automatically handles queuing and rate limiting:
-
-```python
-success = self.send_message(
-    text="Your message here",
-    channel=0,  # Channel index
-    destination_id=node_id  # Optional: for direct messages
-)
-
-if success:
-    self.logger.info("Message sent successfully")
-else:
-    self.logger.error("Failed to send message")
+```yaml
+community-plugins:
+  tx_to_mesh:
+    active: true
+    repository: https://github.com/mate71pl/tx_to_mesh_plugin.git
+    tag: main # or specify a version tag like v1.0.0
+    channels: [0, 1, 2, 3, 4] # Required: Specify which channels to monitor
+    command_prefix: "!tx"
+    case_sensitive: false
+    priority: 10
 ```
 
+**Important**: You must specify the `channels` parameter. This plugin requires explicit channel configuration to function properly.
 
+## Configuration
 
-### Matrix Client Usage
+| Option           | Type    | Default      | Description                                                                  |
+| ---------------- | ------- | ------------ | ---------------------------------------------------------------------------- |
+| `channels`       | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages (DMs are ignored) |
+| `command_prefix` | string  | `"!tx"`      | Command prefix to filter messages                                            |
+| `case_sensitive` | boolean | `false`      | Make prefix matching case sensitive                                          |
+| `priority`       | integer | `10`         | Plugin execution priority (lower = higher priority)                         |
 
-Always use the `send_matrix_message()` method from `BasePlugin`. Never call `connect_matrix()` directly in your plugins, as this will reinitialize the client and cause unnecessary credential reloading.
+### Channel Configuration
 
-```python
-# Preferred method: Use send_matrix_message from BasePlugin.
-# This method automatically handles checking if the matrix client is initialized and logs an error if it's not available.
-await self.send_matrix_message(room_id=room.room_id, message="Your message here")
+**Required**: You must specify the `channels` parameter in your configuration. This plugin will only process Matrix messages that are destined for the configured Meshtastic channels.
+
+**Important**: This plugin ignores direct messages (DMs) and only handles Matrix messages that should be relayed to specific Meshtastic channels. It does NOT handle commands sent via DM to the bot.
+
+**Channel Examples**:
+
+```yaml
+# Monitor all channels (recommended for most use cases)
+channels: [0, 1, 2, 3, 4]
+
+# Monitor only specific channels
+channels: [0, 2]  # Only primary and longfast channels
+
+# Empty channels list (not recommended - plugin won't process any Matrix room messages)
+channels: []  # Plugin will not process any messages (DMs are always ignored)
 ```
 
-### Plugin Name Initialization
+The channel numbers correspond to your Meshtastic channel configuration in `matrix_rooms`.
 
-Define `plugin_name` as a class variable in your plugin class. This is the recommended way to identify your plugin:
+## Usage
 
-```python
-class Plugin(BasePlugin):
-    plugin_name = "your_plugin_name"  # Define plugin_name as a class variable
+### Basic Usage
 
-    # No need to override __init__() unless you need custom initialization
+Send messages to Meshtastic by prefixing with `!tx`:
 
-    async def handle_meshtastic_message(self, packet, formatted_message, longname, meshnet_name):
-        # Your implementation here
-        pass
+```text
+!tx Hello mesh network!
 ```
 
-## Code Quality Tools
+The plugin will automatically:
+1. Remove the `!tx` prefix
+2. Add the configured Matrix sender prefix (e.g., "Alice[M]: ")
+3. Send: "Alice[M]: Hello mesh network!" to the mesh network
 
-This template includes [Trunk](https://trunk.io) for code quality and formatting. Trunk helps maintain clean, consistent code by automatically checking for issues and applying fixes.
+Empty messages after the prefix (e.g., just "!tx") are ignored.
 
-### Using Trunk
+### Help Integration
 
-The Trunk binary is included in this repository at `.trunk/trunk`. To check and fix your code:
+The plugin integrates with MMRelay's help system:
 
-```bash
-.trunk/trunk check --fix --all
-```
+- `!help` - Lists all available commands including `!tx`
+- `!help tx` - Shows description for the tx command
 
-This will:
+## How It Works
 
-- Format your Python code with Black
-- Check for linting issues with Ruff and other tools
-- Apply automatic fixes where possible
-- Ensure your code follows best practices
+1. Matrix messages are intercepted by `handle_room_message()`
+2. Plugin checks if message is for a configured channel using `is_channel_enabled()`
+3. Plugin checks if message starts with configured prefix
+4. If matched, claims the message (returns `True`) to prevent other plugins from processing it
+5. Removes the `!tx` prefix automatically
+6. Adds the configured Matrix sender prefix format (e.g., "Alice[M]: ")
+7. Forwards the formatted message to Meshtastic using the rate-limited `send_message()` helper
+8. Logs success/failure for debugging
 
-Trunk is completely optional but recommended for maintaining high code quality. The configuration is already set up in the `.trunk` directory, so you can start using it immediately without any additional setup.
+### Channel Handling
+
+- **Matrix Messages**: Checked against configured channels (ignores DMs)
+- **Meshtastic Messages**: Always ignored (plugin only handles Matrix->Meshtastic direction)
+- **Channel Filtering**: Only processes Matrix messages destined for configured channels in `channels` list
+- **Direct Messages**: Ignored - this plugin does not respond to DMs
+
+## Development
+
+This plugin follows MMRelay's BasePlugin interface:
+
+- **`handle_room_message()`**: Processes Matrix messages and returns boolean to claim them
+- **`handle_meshtastic_message()`**: Pass-through for mesh messages (no filtering needed)
+- **`get_matrix_commands()`**: Returns list of commands for help system
+- **`description` property**: Provides help text for the plugin
+- **`PLUGIN_INFO`**: Module-level dict containing plugin metadata and config_schema
+
+## License
+
+MIT License - see LICENSE file for details.
