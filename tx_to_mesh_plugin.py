@@ -12,14 +12,7 @@ License: MIT
 from typing import Any, Dict, Optional
 
 # Import the base plugin class
-try:
-    from base_plugin import BasePlugin
-except ImportError:
-    # Fallback for different import structures
-    try:
-        from plugins.base_plugin import BasePlugin
-    except ImportError:
-        from mmrelay.plugins.base_plugin import BasePlugin
+from mmrelay.plugins.base_plugin import BasePlugin
 
 
 class Plugin(BasePlugin):
@@ -53,39 +46,22 @@ class Plugin(BasePlugin):
 
     def __init__(self):
         """
-        Initialize the TX-to-Mesh plugin, validate required configuration, and load runtime options.
+        Initialize the TX-to-Mesh plugin and load runtime options.
 
-        Validates that a `channels` list is present in the plugin configuration and raises ValueError if missing. Loads plugin configuration into `self.plugin_config` and initializes these runtime options with their defaults: `command_prefix` (default: "!tx"), `strip_prefix` (default: True), and `case_sensitive` (default: False). Records initialization details to the plugin logger.
+        Loads plugin configuration from self.config (provided by BasePlugin) and initializes these runtime options with their defaults: `command_prefix` (default: "!tx"), `strip_prefix` (default: True), and `case_sensitive` (default: False). Records initialization details to the plugin logger.
         """
         super().__init__()
 
-        # Plugin configuration is loaded by BasePlugin from the global config
-        # and available as self.config
-        self.plugin_config = self.config
-
-        # Require explicit channel configuration for safety
-        if not self.plugin_config.get("channels"):
-            self.logger.error(
-                f"Plugin '{self.plugin_name}' requires explicit 'channels' configuration. "
-                "Please add a 'channels' list to your plugin configuration in config.yaml. "
-                "Example: channels: [0, 1, 3]"
-            )
-            raise ValueError(
-                f"Plugin '{self.plugin_name}' requires channels configuration"
-            )
-
         # Configuration options with defaults
-        self.command_prefix = self.plugin_config.get("command_prefix", "!tx")
-        self.strip_prefix = self.plugin_config.get("strip_prefix", True)
-        self.case_sensitive = self.plugin_config.get("case_sensitive", False)
-        self.channels = self.plugin_config.get("channels", [])
+        self.command_prefix = self.config.get("command_prefix", "!tx")
+        self.strip_prefix = self.config.get("strip_prefix", True)
+        self.case_sensitive = self.config.get("case_sensitive", False)
 
         # Log plugin initialization
         self.logger.info("TX to Mesh Plugin initialized")
         self.logger.info(f"Command prefix: '{self.command_prefix}'")
         self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
-        self.logger.info(f"Configured channels: {self.channels}")
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
