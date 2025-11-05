@@ -11,9 +11,10 @@ License: MIT
 
 from typing import Any, Dict, Optional
 
+from config import relay_config
+
 # Import the base plugin class and config
 from plugins.base_plugin import BasePlugin
-from config import relay_config
 
 
 class Plugin(BasePlugin):
