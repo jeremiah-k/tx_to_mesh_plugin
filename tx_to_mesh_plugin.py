@@ -52,7 +52,11 @@ class Plugin(BasePlugin):
     plugin_name = "tx_to_mesh"
 
     def __init__(self):
-        """Initialize the plugin with configuration."""
+        """
+        Initialize the TX-to-Mesh plugin, validate required configuration, and load runtime options.
+
+        Validates that a `channels` list is present in the plugin configuration and raises ValueError if missing. Loads plugin configuration into `self.plugin_config` and initializes these runtime options with their defaults: `command_prefix` (default: "!tx"), `strip_prefix` (default: True), and `case_sensitive` (default: False). Records initialization details to the plugin logger.
+        """
         super().__init__()
 
         # Require explicit channel configuration for safety
@@ -84,13 +88,13 @@ class Plugin(BasePlugin):
 
     def get_channel_for_room(self, room_id: str) -> Optional[int]:
         """
-        Helper method to find the Meshtastic channel for a given Matrix room ID.
+        Finds the Meshtastic channel associated with the given Matrix room ID.
 
-        Args:
-            room_id: Matrix room ID to look up
+        Parameters:
+            room_id (str): Matrix room ID to look up.
 
         Returns:
-            Optional[int]: Channel number if found, None otherwise
+            int or None: Channel number if found, None otherwise.
         """
         for room_config in self.matrix_rooms:
             if room_config.get("room_id") == room_id:
@@ -99,19 +103,17 @@ class Plugin(BasePlugin):
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
-        Handle Matrix messages and claim them for forwarding to Meshtastic.
+        Claim Matrix room messages that start with the configured command prefix and relay them to the mapped Meshtastic channel.
 
-        This method intercepts Matrix room messages and filters them based on
-        the command prefix. Only messages starting with the configured prefix
-        are relayed to the mesh network.
+        If the Matrix room maps to a configured channel and the message begins with `command_prefix` (respecting `case_sensitive`), the plugin will send either the content after the prefix or the full message to that channel depending on `strip_prefix`. An empty message after prefix removal is considered handled (claimed) but not forwarded. Room and message data may be taken from the `room`, `event`, or `full_message` objects.
 
-        Args:
-            room: Matrix room object
-            event: Matrix event object
-            full_message: The full message content/dict
+        Parameters:
+            room: Matrix room object (used to obtain `room_id` when available).
+            event: Matrix event object (used to obtain message `body` when available).
+            full_message: Dict-like message payload that may contain `room_id` and `body`.
 
         Returns:
-            bool: True if message was claimed and handled, False otherwise
+            bool: `true` if the message was claimed/handled and should not be processed further, `false` otherwise.
         """
         # This plugin only handles Matrix -> Meshtastic messages, not DMs
         # Always return False for DMs to ignore direct commands
@@ -180,16 +182,18 @@ class Plugin(BasePlugin):
         self, packet, formatted_message: str, longname: str, meshnet_name: str
     ):
         """
-        Handle Meshtastic messages (pass-through, no filtering needed).
+        Pass-through handler for incoming Meshtastic messages.
 
-        This plugin only filters Matrix -> Meshtastic messages, so Meshtastic
-        messages are passed through unchanged.
+        This plugin does not process Meshtastic-origin messages and declines them so other plugins can handle them.
 
-        Args:
-            packet: Meshtastic packet
-            formatted_message: The formatted message content
-            longname: Long name of the Meshtastic node
-            meshnet_name: Name of the source mesh network
+        Parameters:
+            packet: Meshtastic packet object.
+            formatted_message (str): The formatted message content.
+            longname (str): Long name of the Meshtastic node that sent the message.
+            meshnet_name (str): Name of the source mesh network.
+
+        Returns:
+            `False` to indicate the message was not handled and should be passed to other plugins.
         """
         # This plugin only filters Matrix -> Meshtastic, not the reverse
         # Always return False to let other plugins handle Meshtastic messages
@@ -197,10 +201,10 @@ class Plugin(BasePlugin):
 
     def get_matrix_commands(self) -> Dict[str, str]:
         """
-        Return available Matrix commands for this plugin.
+        Return a mapping of the configured Matrix command prefix to its user-facing description.
 
         Returns:
-            Dict[str, str]: Dictionary of commands and their descriptions
+            Dict[str, str]: A dict where the key is the plugin's `command_prefix` and the value is the command description shown to users.
         """
         return {
             self.command_prefix: f"Send message to Meshtastic network (prefix: {self.command_prefix})"
@@ -208,10 +212,10 @@ class Plugin(BasePlugin):
 
     def get_plugin_info(self) -> Dict[str, Any]:
         """
-        Return plugin information and status.
+        Provide plugin metadata and current configuration values.
 
         Returns:
-            Dict[str, Any]: Plugin information
+            Dict[str, Any]: Dictionary with plugin metadata: `name`, `version`, `description`, `author`, `status`, and a `config` mapping containing `command_prefix`, `strip_prefix`, and `case_sensitive`.
         """
         return {
             "name": self.plugin_name,
@@ -230,16 +234,13 @@ class Plugin(BasePlugin):
         self, command: str, _args: list, _room_id: str, _sender_id: str
     ) -> Optional[str]:
         """
-        Handle plugin-specific commands from Matrix.
+        Produce a response for the "tx_filter_status" plugin command.
 
-        Args:
-            command: The command name
-            args: List of command arguments
-            room_id: Matrix room ID
-            sender_id: Matrix user ID of the sender
+        Parameters:
+            command (str): The plugin command to handle.
 
         Returns:
-            Optional[str]: Response message, or None
+            Optional[str]: A formatted status string when `command` is "tx_filter_status", `None` otherwise.
         """
         if command == "tx_filter_status":
             info = self.get_plugin_info()
