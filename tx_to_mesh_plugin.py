@@ -88,7 +88,11 @@ class Plugin(BasePlugin):
             return False
 
         # Look up channel in matrix_rooms config
-        channel = self.get_channel_for_room(room_id)
+        channel = None
+        for room_config in self.matrix_rooms:
+            if room_config.get("room_id") == room_id:
+                channel = room_config.get("channel")
+                break
 
         if channel is None:
             self.logger.debug(
