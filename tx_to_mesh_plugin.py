@@ -9,9 +9,6 @@ Author: mate71pl
 License: MIT
 """
 
-# Imports needed for standalone plugin compatibility
-import asyncio  # noqa: F401
-import logging  # noqa: F401
 from typing import Any, Dict, Optional
 
 # Import the base plugin class
@@ -37,12 +34,13 @@ class Plugin(BasePlugin):
 
     plugin_name = "tx_to_mesh"
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self):
         """Initialize the plugin with configuration."""
-        super().__init__(config)
+        super().__init__()
 
-        # Plugin configuration - get from the plugins section
-        self.plugin_config = config.get("plugins", {}).get(self.plugin_name, {})
+        # Plugin configuration is loaded by BasePlugin from the global config
+        # and available as self.config
+        self.plugin_config = self.config
 
         # Configuration options with defaults
         self.command_prefix = self.plugin_config.get("command_prefix", "!tx")
