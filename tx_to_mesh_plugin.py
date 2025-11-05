@@ -46,16 +46,12 @@ class Plugin(BasePlugin):
         self.command_prefix = self.plugin_config.get("command_prefix", "!tx")
         self.strip_prefix = self.plugin_config.get("strip_prefix", True)
         self.case_sensitive = self.plugin_config.get("case_sensitive", False)
-        self.allow_empty_message = self.plugin_config.get("allow_empty_message", False)
 
         # Log plugin initialization
         self.logger.info("TX to Mesh Plugin initialized")
         self.logger.info(f"Command prefix: '{self.command_prefix}'")
         self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
-        self.logger.info(
-            f"Allow empty message after prefix: {self.allow_empty_message}"
-        )
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
@@ -99,8 +95,9 @@ class Plugin(BasePlugin):
             else (candidate.lower() == prefix.lower())
         ):
             content = msg[len(prefix) :].lstrip()
-            if not content and not self.allow_empty_message:
-                self.logger.warning("tx_to_mesh: empty after prefix; blocking")
+            if not content:
+                # Ignore empty messages after prefix removal
+                self.logger.debug("tx_to_mesh: empty after prefix; ignoring")
                 return True  # Claimed, do not fall through
 
             # Optionally keep or strip prefix
@@ -162,7 +159,6 @@ class Plugin(BasePlugin):
                 "command_prefix": self.command_prefix,
                 "strip_prefix": self.strip_prefix,
                 "case_sensitive": self.case_sensitive,
-                "allow_empty_message": self.allow_empty_message,
             },
         }
 
@@ -188,7 +184,6 @@ class Plugin(BasePlugin):
                 f"• Command prefix: {info['config']['command_prefix']}\n"
                 f"• Strip prefix: {info['config']['strip_prefix']}\n"
                 f"• Case sensitive: {info['config']['case_sensitive']}\n"
-                f"• Allow empty message: {info['config']['allow_empty_message']}\n"
                 f"• Status: {info['status']}"
             )
 
@@ -222,11 +217,6 @@ PLUGIN_INFO = {
             "type": "boolean",
             "default": False,
             "description": "Make command prefix matching case sensitive",
-        },
-        "allow_empty_message": {
-            "type": "boolean",
-            "default": False,
-            "description": "Allow sending messages that are empty after removing prefix",
         },
     },
 }

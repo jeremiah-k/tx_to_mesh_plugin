@@ -7,7 +7,7 @@ A plugin for MMRelay that filters Matrix messages and only forwards messages sta
 - **Command Filtering**: Only messages starting with `!tx` (or configured prefix) are relayed to Meshtastic
 - **Prefix Stripping**: Optionally removes the command prefix before sending to mesh
 - **Case Sensitivity**: Configurable case-sensitive prefix matching
-- **Empty Message Handling**: Configurable behavior for empty messages after prefix removal
+- **Empty Message Handling**: Ignores empty messages after prefix removal
 - **Priority Control**: Runs early to claim messages before other plugins
 
 ## Installation
@@ -24,7 +24,6 @@ community-plugins:
     command_prefix: "!tx"
     strip_prefix: true
     case_sensitive: false
-    allow_empty_message: false
     priority: 10
 ```
 
@@ -38,7 +37,7 @@ community-plugins:
 | `command_prefix`      | string  | `"!tx"` | Command prefix to filter messages                   |
 | `strip_prefix`        | boolean | `true`  | Remove command prefix before sending to mesh        |
 | `case_sensitive`      | boolean | `false` | Make prefix matching case sensitive                 |
-| `allow_empty_message` | boolean | `false` | Allow empty messages after removing prefix          |
+
 | `priority`            | integer | `10`    | Plugin execution priority (lower = higher priority) |
 
 ### Channel Configuration
@@ -73,6 +72,7 @@ Send messages to Meshtastic by prefixing with `!tx`:
 
 If `strip_prefix` is `true` (default), only "Hello mesh network!" will be sent to the mesh.
 If `strip_prefix` is `false`, the full "!tx Hello mesh network!" will be sent.
+Empty messages after the prefix (e.g., just "!tx") are ignored.
 
 ### Help Integration
 
