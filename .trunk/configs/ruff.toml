@@ -2,4 +2,5 @@
 select = ["B", "D3", "E", "F"]
 
 # Never enforce `E501` (line length violations). This should be handled by formatters.
-ignore = ["E501"]
+# Ignore `F401` (unused imports) for standalone plugin compatibility
+ignore = ["E501", "F401"]

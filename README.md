@@ -1,76 +1,81 @@
-# mmr-plugin-template
+# TX to Mesh Plugin for MMRelay
 
-## MMRelay Plugin Template
+A plugin for MMRelay that filters Matrix messages and only forwards messages starting with a specific command prefix (default: `!tx`) to the Meshtastic network.
 
-Fork this repo and create a new one with the name of your plugin, rename `example_plugin.py` to the name of your plugin and go from there.
+## Features
 
-For more information on the basics of creating plugins see the [MMRelay Plugin Development Guide](https://github.com/geoffwhittington/meshtastic-matrix-relay/wiki/Plugin-Development-Guide).
+- **Command Filtering**: Only messages starting with `!tx` (or configured prefix) are relayed to Meshtastic
+- **Prefix Stripping**: Optionally removes the command prefix before sending to mesh
+- **Case Sensitivity**: Configurable case-sensitive prefix matching
+- **Empty Message Handling**: Configurable behavior for empty messages after prefix removal
+- **Priority Control**: Runs early to claim messages before other plugins
 
-## Important Notes
+## Installation
 
-### Sending Messages
+Add this plugin as a community plugin in your MMRelay `config.yaml`:
 
-#### Sending Meshtastic Messages
-
-Use the `send_message()` method from `BasePlugin`. This automatically handles queuing and rate limiting:
-
-```python
-success = self.send_message(
-    text="Your message here",
-    channel=0,  # Channel index
-    destination_id=node_id  # Optional: for direct messages
-)
-
-if success:
-    self.logger.info("Message sent successfully")
-else:
-    self.logger.error("Failed to send message")
+```yaml
+community-plugins:
+  tx_to_mesh:
+    active: true
+    repository: https://github.com/yourusername/tx_to_mesh_plugin.git
+    tag: main # or specify a version tag like v1.0.0
+    command_prefix: "!tx"
+    strip_prefix: true
+    case_sensitive: false
+    allow_empty_message: false
+    priority: 10
 ```
 
+## Configuration
 
+| Option                | Type    | Default | Description                                         |
+| --------------------- | ------- | ------- | --------------------------------------------------- |
+| `command_prefix`      | string  | `"!tx"` | Command prefix to filter messages                   |
+| `strip_prefix`        | boolean | `true`  | Remove command prefix before sending to mesh        |
+| `case_sensitive`      | boolean | `false` | Make prefix matching case sensitive                 |
+| `allow_empty_message` | boolean | `false` | Allow empty messages after removing prefix          |
+| `priority`            | integer | `10`    | Plugin execution priority (lower = higher priority) |
 
-### Matrix Client Usage
+## Usage
 
-Always use the `send_matrix_message()` method from `BasePlugin`. Never call `connect_matrix()` directly in your plugins, as this will reinitialize the client and cause unnecessary credential reloading.
+### Basic Usage
 
-```python
-# Preferred method: Use send_matrix_message from BasePlugin.
-# This method automatically handles checking if the matrix client is initialized and logs an error if it's not available.
-await self.send_matrix_message(room_id=room.room_id, message="Your message here")
+Send messages to Meshtastic by prefixing with `!tx`:
+
+```text
+!tx Hello mesh network!
 ```
 
-### Plugin Name Initialization
+If `strip_prefix` is `true` (default), only "Hello mesh network!" will be sent to the mesh.
+If `strip_prefix` is `false`, the full "!tx Hello mesh network!" will be sent.
 
-Define `plugin_name` as a class variable in your plugin class. This is the recommended way to identify your plugin:
+### Help Integration
 
-```python
-class Plugin(BasePlugin):
-    plugin_name = "your_plugin_name"  # Define plugin_name as a class variable
+The plugin integrates with MMRelay's help system:
 
-    # No need to override __init__() unless you need custom initialization
+- `!help` - Lists all available commands including `!tx`
+- `!help tx` - Shows description for the tx command
 
-    async def handle_meshtastic_message(self, packet, formatted_message, longname, meshnet_name):
-        # Your implementation here
-        pass
-```
+## How It Works
 
-## Code Quality Tools
+1. Matrix messages are intercepted by `handle_room_message()`
+2. Plugin checks if message starts with configured prefix
+3. If matched, claims the message (returns `True`) to prevent other plugins from processing it
+4. Optionally strips the prefix based on configuration
+5. Forwards the message to Meshtastic using the rate-limited `send_message()` helper
+6. Logs success/failure for debugging
 
-This template includes [Trunk](https://trunk.io) for code quality and formatting. Trunk helps maintain clean, consistent code by automatically checking for issues and applying fixes.
+## Development
 
-### Using Trunk
+This plugin follows MMRelay's BasePlugin interface:
 
-The Trunk binary is included in this repository at `.trunk/trunk`. To check and fix your code:
+- **`handle_room_message()`**: Processes Matrix messages and returns boolean to claim them
+- **`handle_meshtastic_message()`**: Pass-through for mesh messages (no filtering needed)
+- **`get_matrix_commands()`**: Returns list of commands for help system
+- **`description` property**: Provides help text for the plugin
+- **`get_config_schema()`**: Defines configuration validation schema
 
-```bash
-.trunk/trunk check --fix --all
-```
+## License
 
-This will:
-
-- Format your Python code with Black
-- Check for linting issues with Ruff and other tools
-- Apply automatic fixes where possible
-- Ensure your code follows best practices
-
-Trunk is completely optional but recommended for maintaining high code quality. The configuration is already set up in the `.trunk` directory, so you can start using it immediately without any additional setup.
+MIT License - see LICENSE file for details.

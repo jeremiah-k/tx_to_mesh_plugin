@@ -11,7 +11,7 @@ License: MIT
 
 import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # Import the base plugin class
 try:
@@ -50,14 +50,17 @@ class Plugin(BasePlugin):
         self.allow_empty_message = self.plugin_config.get("allow_empty_message", False)
 
         # Log plugin initialization
-        self.logger.info(f"TX to Mesh Plugin initialized")
+        self.logger.info("TX to Mesh Plugin initialized")
         self.logger.info(f"Command prefix: '{self.command_prefix}'")
         self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
-        self.logger.info(f"Allow empty message after prefix: {self.allow_empty_message}")
+        self.logger.info(
+            f"Allow empty message after prefix: {self.allow_empty_message}"
+        )
 
-    async def handle_matrix_message(self, room, event, formatted_message: str,
-                                   sender_id: str, meshnet_name: str) -> Optional[str]:
+    async def handle_matrix_message(
+        self, room, event, formatted_message: str, sender_id: str, meshnet_name: str
+    ) -> Optional[str]:
         """
         Handle Matrix messages before they are sent to Meshtastic.
 
@@ -93,7 +96,9 @@ class Plugin(BasePlugin):
 
         # Check if message starts with the command prefix
         if not check_message.startswith(command_prefix):
-            self.logger.debug(f"Message does not start with '{self.command_prefix}', blocking relay")
+            self.logger.debug(
+                f"Message does not start with '{self.command_prefix}', blocking relay"
+            )
             return None
 
         # Log that we're processing a valid command
@@ -102,11 +107,13 @@ class Plugin(BasePlugin):
         # Extract the message content after the command prefix
         if self.strip_prefix:
             # Remove the command prefix and any following whitespace
-            message_content = original_message[len(self.command_prefix):].lstrip()
+            message_content = original_message[len(self.command_prefix) :].lstrip()
 
             # Check if we allow empty messages after stripping prefix
             if not message_content and not self.allow_empty_message:
-                self.logger.warning(f"Empty message after removing '{self.command_prefix}' prefix, blocking relay")
+                self.logger.warning(
+                    f"Empty message after removing '{self.command_prefix}' prefix, blocking relay"
+                )
                 return None
 
             self.logger.debug(f"Stripped prefix, sending: '{message_content}'")
@@ -116,8 +123,9 @@ class Plugin(BasePlugin):
             self.logger.debug(f"Keeping full message: '{original_message}'")
             return original_message
 
-    async def handle_meshtastic_message(self, packet, formatted_message: str,
-                                      longname: str, meshnet_name: str):
+    async def handle_meshtastic_message(
+        self, packet, formatted_message: str, longname: str, meshnet_name: str
+    ):
         """
         Handle Meshtastic messages (pass-through, no filtering needed).
 
@@ -162,12 +170,13 @@ class Plugin(BasePlugin):
                 "command_prefix": self.command_prefix,
                 "strip_prefix": self.strip_prefix,
                 "case_sensitive": self.case_sensitive,
-                "allow_empty_message": self.allow_empty_message
-            }
+                "allow_empty_message": self.allow_empty_message,
+            },
         }
 
-    async def handle_plugin_command(self, command: str, args: list,
-                                  room_id: str, sender_id: str) -> Optional[str]:
+    async def handle_plugin_command(
+        self, command: str, args: list, room_id: str, sender_id: str
+    ) -> Optional[str]:
         """
         Handle plugin-specific commands from Matrix.
 
@@ -182,11 +191,13 @@ class Plugin(BasePlugin):
         """
         if command == "tx_filter_status":
             info = self.get_plugin_info()
-            return f"TX to Mesh Plugin Status:\n" \
-                   f"• Command prefix: {info['config']['command_prefix']}\n" \
-                   f"• Strip prefix: {info['config']['strip_prefix']}\n" \
-                   f"• Case sensitive: {info['config']['case_sensitive']}\n" \
-                   f"• Status: {info['status']}"
+            return (
+                f"TX to Mesh Plugin Status:\n"
+                f"• Command prefix: {info['config']['command_prefix']}\n"
+                f"• Strip prefix: {info['config']['strip_prefix']}\n"
+                f"• Case sensitive: {info['config']['case_sensitive']}\n"
+                f"• Status: {info['status']}"
+            )
 
         return None
 
@@ -202,23 +213,22 @@ PLUGIN_INFO = {
         "command_prefix": {
             "type": "string",
             "default": "!tx",
-            "description": "Command prefix to filter messages (default: !tx)"
+            "description": "Command prefix to filter messages (default: !tx)",
         },
         "strip_prefix": {
             "type": "boolean",
             "default": True,
-            "description": "Remove command prefix from message before sending to Meshtastic"
+            "description": "Remove command prefix from message before sending to Meshtastic",
         },
         "case_sensitive": {
             "type": "boolean",
             "default": False,
-            "description": "Make command prefix matching case sensitive"
+            "description": "Make command prefix matching case sensitive",
         },
         "allow_empty_message": {
             "type": "boolean",
             "default": False,
-            "description": "Allow sending messages that are empty after removing prefix"
-        }
-    }
+            "description": "Allow sending messages that are empty after removing prefix",
+        },
+    },
 }
-
