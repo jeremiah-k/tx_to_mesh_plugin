@@ -5,7 +5,7 @@ A plugin for MMRelay that filters Matrix messages and only forwards messages sta
 ## Features
 
 - **Command Filtering**: Only messages starting with `!tx` (or configured prefix) are relayed to Meshtastic
-- **Prefix Stripping**: Optionally removes the command prefix before sending to mesh
+- **Sender Attribution**: Always includes the configured Matrix prefix format (e.g., "Alice[M]: ") before messages
 - **Case Sensitivity**: Configurable case-sensitive prefix matching
 - **Priority Control**: Runs early to claim messages before other plugins
 
@@ -21,7 +21,6 @@ community-plugins:
     tag: main # or specify a version tag like v1.0.0
     channels: [0, 1, 2, 3, 4] # Required: Specify which channels to monitor
     command_prefix: "!tx"
-    strip_prefix: true
     case_sensitive: false
     priority: 10
 ```
@@ -34,10 +33,8 @@ community-plugins:
 | ---------------- | ------- | ------------ | ---------------------------------------------------------------------------- |
 | `channels`       | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages (DMs are ignored) |
 | `command_prefix` | string  | `"!tx"`      | Command prefix to filter messages                                            |
-| `strip_prefix`   | boolean | `true`       | Remove command prefix before sending to mesh                                 |
 | `case_sensitive` | boolean | `false`      | Make prefix matching case sensitive                                          |
-
-| `priority` | integer | `10` | Plugin execution priority (lower = higher priority) |
+| `priority`       | integer | `10`         | Plugin execution priority (lower = higher priority)                         |
 
 ### Channel Configuration
 
@@ -70,8 +67,11 @@ Send messages to Meshtastic by prefixing with `!tx`:
 !tx Hello mesh network!
 ```
 
-If `strip_prefix` is `true` (default), only "Hello mesh network!" will be sent to the mesh.
-If `strip_prefix` is `false`, the full "!tx Hello mesh network!" will be sent.
+The plugin will automatically:
+1. Remove the `!tx` prefix
+2. Add the configured Matrix sender prefix (e.g., "Alice[M]: ")
+3. Send: "Alice[M]: Hello mesh network!" to the mesh network
+
 Empty messages after the prefix (e.g., just "!tx") are ignored.
 
 ### Help Integration
@@ -87,9 +87,10 @@ The plugin integrates with MMRelay's help system:
 2. Plugin checks if message is for a configured channel using `is_channel_enabled()`
 3. Plugin checks if message starts with configured prefix
 4. If matched, claims the message (returns `True`) to prevent other plugins from processing it
-5. Optionally strips the prefix based on configuration
-6. Forwards the message to Meshtastic using the rate-limited `send_message()` helper
-7. Logs success/failure for debugging
+5. Removes the `!tx` prefix automatically
+6. Adds the configured Matrix sender prefix format (e.g., "Alice[M]: ")
+7. Forwards the formatted message to Meshtastic using the rate-limited `send_message()` helper
+8. Logs success/failure for debugging
 
 ### Channel Handling
 

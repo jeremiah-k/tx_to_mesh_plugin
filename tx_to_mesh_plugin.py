@@ -14,6 +14,10 @@ from typing import Any, Dict, Optional
 # Import the base plugin class and config
 from mmrelay.plugins.base_plugin import BasePlugin, config
 
+# Import message formatting functions
+from mmrelay.matrix_utils import get_meshtastic_prefix
+from mmrelay.constants.formats import DEFAULT_MESHTASTIC_PREFIX
+
 
 class Plugin(BasePlugin):
     """
@@ -31,7 +35,6 @@ class Plugin(BasePlugin):
 
     Optional Configuration:
         command_prefix: Command prefix to filter messages (default: "!tx")
-        strip_prefix: Remove command prefix before sending (default: True)
         case_sensitive: Make prefix matching case sensitive (default: False)
 
     Example Configuration:
@@ -54,13 +57,11 @@ class Plugin(BasePlugin):
 
         # Configuration options with defaults
         self.command_prefix = self.config.get("command_prefix", "!tx")
-        self.strip_prefix = self.config.get("strip_prefix", True)
         self.case_sensitive = self.config.get("case_sensitive", False)
 
         # Log plugin initialization
         self.logger.info("TX to Mesh Plugin initialized")
         self.logger.info(f"Command prefix: '{self.command_prefix}'")
-        self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
 
     async def handle_room_message(self, room, event, full_message) -> bool:
@@ -131,8 +132,27 @@ class Plugin(BasePlugin):
                 self.logger.debug("tx_to_mesh: empty after prefix; ignoring")
                 return True  # Claimed, do not fall through
 
-            # Optionally keep or strip prefix
-            to_send = content if self.strip_prefix else msg
+            # Get sender display name for proper attribution
+            room_display_name = (
+                getattr(room, "user_name", lambda x: None)(event.sender)
+                if hasattr(room, "user_name")
+                else None
+            )
+            if room_display_name:
+                display_name = room_display_name
+            else:
+                # Fallback to extracting from event sender or use a generic format
+                display_name = (
+                    event.sender.split(":")[0][1:]
+                    if ":" in event.sender
+                    else event.sender
+                )
+
+            # Generate proper sender prefix using configured matrix prefix format
+            sender_prefix = get_meshtastic_prefix(config, display_name, event.sender)
+
+            # Construct message with sender attribution (never include !tx prefix)
+            to_send = f"{sender_prefix}{content}"
 
             # Send to mesh via BasePlugin helper (queued & rate-limited)
             try:
@@ -197,7 +217,6 @@ class Plugin(BasePlugin):
             "status": "active",
             "config": {
                 "command_prefix": self.command_prefix,
-                "strip_prefix": self.strip_prefix,
                 "case_sensitive": self.case_sensitive,
             },
         }
@@ -219,7 +238,6 @@ class Plugin(BasePlugin):
             return (
                 f"TX to Mesh Plugin Status:\n"
                 f"• Command prefix: {info['config']['command_prefix']}\n"
-                f"• Strip prefix: {info['config']['strip_prefix']}\n"
                 f"• Case sensitive: {info['config']['case_sensitive']}\n"
                 f"• Status: {info['status']}"
             )
@@ -244,11 +262,6 @@ PLUGIN_INFO = {
             "type": "string",
             "default": "!tx",
             "description": "Command prefix to filter messages (default: !tx)",
-        },
-        "strip_prefix": {
-            "type": "boolean",
-            "default": True,
-            "description": "Remove command prefix from message before sending to Meshtastic",
         },
         "case_sensitive": {
             "type": "boolean",
