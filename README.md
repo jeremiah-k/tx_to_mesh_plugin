@@ -1,6 +1,6 @@
 # TX to Mesh Plugin for MMRelay
 
-A plugin for MMRelay that filters Matrix messages and only forwards messages starting with a specific command prefix (default: `!tx`) to the Meshtastic network.
+A plugin for MMRelay that filters Matrix messages and only forwards messages starting with a specific command prefix (default: `!tx`) to the Meshtastic network. This plugin only handles Matrix->Meshtastic messages and ignores direct messages.
 
 ## Features
 
@@ -34,7 +34,7 @@ community-plugins:
 
 | Option                | Type    | Default | Description                                         |
 | --------------------- | ------- | ------- | --------------------------------------------------- |
-| `channels`            | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages |
+| `channels`            | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages (DMs are ignored) |
 | `command_prefix`      | string  | `"!tx"` | Command prefix to filter messages                   |
 | `strip_prefix`        | boolean | `true`  | Remove command prefix before sending to mesh        |
 | `case_sensitive`      | boolean | `false` | Make prefix matching case sensitive                 |
@@ -45,6 +45,8 @@ community-plugins:
 
 **Required**: You must specify the `channels` parameter in your configuration. This plugin will only process Matrix messages that are destined for the configured Meshtastic channels.
 
+**Important**: This plugin ignores direct messages (DMs) and only handles Matrix messages that should be relayed to specific Meshtastic channels. It does NOT handle commands sent via DM to the bot.
+
 **Channel Examples**:
 ```yaml
 # Monitor all channels (recommended for most use cases)
@@ -53,8 +55,8 @@ channels: [0, 1, 2, 3, 4]
 # Monitor only specific channels
 channels: [0, 2]  # Only primary and longfast channels
 
-# Monitor no channels (DMs only)
-channels: []  # Only respond to direct messages
+# Empty channels list (not recommended - plugin won't respond to anything)
+channels: []  # Plugin will ignore all messages including DMs
 ```
 
 The channel numbers correspond to your Meshtastic channel configuration in `matrix_rooms`.
@@ -82,8 +84,8 @@ The plugin integrates with MMRelay's help system:
 ## How It Works
 
 1. Matrix messages are intercepted by `handle_room_message()`
-2. Plugin checks if the message is for a configured channel using `is_channel_enabled()`
-3. Plugin checks if the message starts with the configured prefix
+2. Plugin checks if message is for a configured channel using `is_channel_enabled()`
+3. Plugin checks if message starts with configured prefix
 4. If matched, claims the message (returns `True`) to prevent other plugins from processing it
 5. Optionally strips the prefix based on configuration
 6. Forwards the message to Meshtastic using the rate-limited `send_message()` helper
@@ -91,9 +93,10 @@ The plugin integrates with MMRelay's help system:
 
 ### Channel Handling
 
-- **Matrix Messages**: Always considered "direct messages" for channel checking since they come from Matrix rooms
-- **Meshtastic Messages**: Checked against actual channel numbers and direct message status
-- **Channel Filtering**: Only processes messages destined for configured channels in `channels` list
+- **Matrix Messages**: Checked against configured channels (ignores DMs)
+- **Meshtastic Messages**: Always ignored (plugin only handles Matrix->Meshtastic direction)
+- **Channel Filtering**: Only processes Matrix messages destined for configured channels in `channels` list
+- **Direct Messages**: Ignored - this plugin does not respond to DMs
 
 ## Development
 

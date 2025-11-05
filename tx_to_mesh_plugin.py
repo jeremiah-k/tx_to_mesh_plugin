@@ -73,11 +73,10 @@ class Plugin(BasePlugin):
         Returns:
             bool: True if message was claimed and handled, False otherwise
         """
-        # Check if this plugin should respond to this message
-        # For Matrix messages, we need to determine the channel from the room configuration
-        # Matrix messages are always considered "direct messages" for channel checking purposes
-        # since they come from Matrix rooms, not Meshtastic channels
-        if not self.is_channel_enabled(0, is_direct_message=True):
+        # This plugin only handles Matrix -> Meshtastic messages, not DMs
+        # Always return False for DMs to ignore direct commands
+        # Matrix messages should be mapped to specific Meshtastic channels
+        if not self.is_channel_enabled(0, is_direct_message=False):
             self.logger.debug(f"tx_to_mesh: not enabled for this room/channel")
             return False
 
@@ -131,16 +130,8 @@ class Plugin(BasePlugin):
             longname: Long name of the Meshtastic node
             meshnet_name: Name of the source mesh network
         """
-        # Check if this plugin should respond to this message
-        channel = packet.get("channel", 0)
-        is_direct_message = self.is_direct_message(packet)
-
-        if not self.is_channel_enabled(channel, is_direct_message=is_direct_message):
-            self.logger.debug(f"tx_to_mesh: not enabled for channel {channel}")
-            return False
-
-        # This plugin doesn't need to process Meshtastic messages
-        # All Meshtastic -> Matrix messages pass through unchanged
+        # This plugin only filters Matrix -> Meshtastic, not the reverse
+        # Always return False to let other plugins handle Meshtastic messages
         return False
 
     def get_matrix_commands(self) -> Dict[str, str]:
