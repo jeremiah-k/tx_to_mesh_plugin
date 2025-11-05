@@ -19,7 +19,7 @@ community-plugins:
     active: true
     repository: https://github.com/mate71pl/tx_to_mesh_plugin.git
     tag: main # or specify a version tag like v1.0.0
-    channels: [0, 1, 2, 3, 4]  # Required: Specify which channels to monitor
+    channels: [0, 1, 2, 3, 4] # Required: Specify which channels to monitor
     command_prefix: "!tx"
     strip_prefix: true
     case_sensitive: false
@@ -30,14 +30,14 @@ community-plugins:
 
 ## Configuration
 
-| Option                | Type    | Default | Description                                         |
-| --------------------- | ------- | ------- | --------------------------------------------------- |
-| `channels`            | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages (DMs are ignored) |
-| `command_prefix`      | string  | `"!tx"` | Command prefix to filter messages                   |
-| `strip_prefix`        | boolean | `true`  | Remove command prefix before sending to mesh        |
-| `case_sensitive`      | boolean | `false` | Make prefix matching case sensitive                 |
+| Option           | Type    | Default      | Description                                                                  |
+| ---------------- | ------- | ------------ | ---------------------------------------------------------------------------- |
+| `channels`       | list    | **Required** | List of Meshtastic channels to monitor for Matrix messages (DMs are ignored) |
+| `command_prefix` | string  | `"!tx"`      | Command prefix to filter messages                                            |
+| `strip_prefix`   | boolean | `true`       | Remove command prefix before sending to mesh                                 |
+| `case_sensitive` | boolean | `false`      | Make prefix matching case sensitive                                          |
 
-| `priority`            | integer | `10`    | Plugin execution priority (lower = higher priority) |
+| `priority` | integer | `10` | Plugin execution priority (lower = higher priority) |
 
 ### Channel Configuration
 
@@ -46,6 +46,7 @@ community-plugins:
 **Important**: This plugin ignores direct messages (DMs) and only handles Matrix messages that should be relayed to specific Meshtastic channels. It does NOT handle commands sent via DM to the bot.
 
 **Channel Examples**:
+
 ```yaml
 # Monitor all channels (recommended for most use cases)
 channels: [0, 1, 2, 3, 4]

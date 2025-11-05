@@ -30,6 +30,23 @@ class Plugin(BasePlugin):
     and only allows messages that start with '!tx' to be relayed.
     When a message starts with '!tx', the command prefix is stripped before
     sending to the mesh network.
+
+    Required Configuration:
+        channels: List of Meshtastic channels to monitor (REQUIRED)
+            Example: channels: [0, 1, 3]
+            This plugin requires explicit channel configuration for safety.
+
+    Optional Configuration:
+        command_prefix: Command prefix to filter messages (default: "!tx")
+        strip_prefix: Remove command prefix before sending (default: True)
+        case_sensitive: Make prefix matching case sensitive (default: False)
+
+    Example Configuration:
+        plugins:
+            tx_to_mesh:
+                active: true
+                channels: [0, 1, 3]  # REQUIRED
+                command_prefix: "!tx"
     """
 
     plugin_name = "tx_to_mesh"
@@ -37,6 +54,17 @@ class Plugin(BasePlugin):
     def __init__(self):
         """Initialize the plugin with configuration."""
         super().__init__()
+
+        # Require explicit channel configuration for safety
+        if not self.config.get("channels"):
+            self.logger.error(
+                f"Plugin '{self.plugin_name}' requires explicit 'channels' configuration. "
+                "Please add a 'channels' list to your plugin configuration in config.yaml. "
+                "Example: channels: [0, 1, 3]"
+            )
+            raise ValueError(
+                f"Plugin '{self.plugin_name}' requires channels configuration"
+            )
 
         # Plugin configuration is loaded by BasePlugin from the global config
         # and available as self.config
@@ -52,6 +80,22 @@ class Plugin(BasePlugin):
         self.logger.info(f"Command prefix: '{self.command_prefix}'")
         self.logger.info(f"Strip prefix: {self.strip_prefix}")
         self.logger.info(f"Case sensitive: {self.case_sensitive}")
+        self.logger.info(f"Configured channels: {self.channels}")
+
+    def get_channel_for_room(self, room_id: str) -> Optional[int]:
+        """
+        Helper method to find the Meshtastic channel for a given Matrix room ID.
+
+        Args:
+            room_id: Matrix room ID to look up
+
+        Returns:
+            Optional[int]: Channel number if found, None otherwise
+        """
+        for room_config in self.matrix_rooms:
+            if room_config.get("room_id") == room_id:
+                return room_config.get("channel")
+        return None
 
     async def handle_room_message(self, room, event, full_message) -> bool:
         """
@@ -72,8 +116,26 @@ class Plugin(BasePlugin):
         # This plugin only handles Matrix -> Meshtastic messages, not DMs
         # Always return False for DMs to ignore direct commands
         # Matrix messages should be mapped to specific Meshtastic channels
-        if not self.is_channel_enabled(0, is_direct_message=False):
-            self.logger.debug(f"tx_to_mesh: not enabled for this room/channel")
+
+        # Find the channel for this room using matrix_rooms config
+        room_id = getattr(room, "room_id", None) or full_message.get("room_id")
+        if not room_id:
+            self.logger.debug("tx_to_mesh: no room_id found")
+            return False
+
+        # Look up channel in matrix_rooms config
+        channel = self.get_channel_for_room(room_id)
+
+        if channel is None:
+            self.logger.debug(
+                f"tx_to_mesh: room {room_id} not found in matrix_rooms config"
+            )
+            return False
+
+        if not self.is_channel_enabled(channel, is_direct_message=False):
+            self.logger.debug(
+                f"tx_to_mesh: channel {channel} not enabled for room {room_id}"
+            )
             return False
 
         # Extract message body from event or full_message
@@ -105,10 +167,12 @@ class Plugin(BasePlugin):
 
             # Send to mesh via BasePlugin helper (queued & rate-limited)
             try:
-                await self.send_message(to_send)
-                self.logger.info("tx_to_mesh: relayed to mesh")
+                await self.send_message(to_send, channel=channel)
+                self.logger.info(f"tx_to_mesh: relayed to mesh on channel {channel}")
             except Exception:
-                self.logger.exception("tx_to_mesh: failed to relay")
+                self.logger.exception(
+                    f"tx_to_mesh: failed to relay on channel {channel}"
+                )
             return True  # Claimed
         return False
 
