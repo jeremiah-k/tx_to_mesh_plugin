@@ -7,7 +7,6 @@ A plugin for MMRelay that filters Matrix messages and only forwards messages sta
 - **Command Filtering**: Only messages starting with `!tx` (or configured prefix) are relayed to Meshtastic
 - **Prefix Stripping**: Optionally removes the command prefix before sending to mesh
 - **Case Sensitivity**: Configurable case-sensitive prefix matching
-- **Empty Message Handling**: Ignores empty messages after prefix removal
 - **Priority Control**: Runs early to claim messages before other plugins
 
 ## Installation
